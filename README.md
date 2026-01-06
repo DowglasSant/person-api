@@ -1,8 +1,10 @@
 # Pessoas API
 
-API REST para gerenciamento de pessoas, construída com Go seguindo os princípios de Clean Architecture.
+API REST para gerenciamento de pessoas, construída com Go seguindo os princípios de **Hexagonal Architecture** (Ports & Adapters).
 
 ## Arquitetura
+
+Esta aplicação implementa **Hexagonal Architecture**, separando claramente o domínio da infraestrutura através de portas (interfaces) e adaptadores (implementações).
 
 ```
 .
@@ -13,20 +15,35 @@ API REST para gerenciamento de pessoas, construída com Go seguindo os princípi
 │   ├── contract/                      # DTOs e contratos de API
 │   │   └── person/
 │   │       ├── new_person_dto.go
-│   │       └── person_response_dto.go
-│   ├── domain/                        # Camada de domínio
+│   │       ├── person_response_dto.go
+│   │       └── pagination_dto.go
+│   │
+│   ├── domain/                        # 🔵 HEXÁGONO (Núcleo da Aplicação)
 │   │   └── person/
 │   │       ├── model/                 # Entidades de domínio
-│   │       ├── repository/            # Interfaces de repositório
-│   │       ├── service/               # Lógica de negócio
+│   │       │   └── person.go
+│   │       ├── ports/                 # 🔌 PORTAS (Interfaces)
+│   │       │   ├── service.go         # PersonService interface
+│   │       │   └── repository.go      # PersonRepository interface
+│   │       ├── service/               # Lógica de negócio (implementa porta)
+│   │       │   └── person_service.go  # PersonServiceImpl
 │   │       ├── error/                 # Erros de domínio
-│   │       └── utils/                 # Utilitários
-│   └── infrastructure/                # Camada de infraestrutura
+│   │       └── utils/                 # Utilitários de domínio
+│   │
+│   └── infrastructure/                # ⚙️ ADAPTADORES (Camada Externa)
 │       ├── database/                  # Configuração de banco de dados
-│       ├── persistence/               # Implementação de repositórios
-│       └── http/                      # HTTP handlers e routers
-│           ├── handler/
-│           └── router/
+│       ├── persistence/               # Adapter de persistência
+│       │   └── person/
+│       │       ├── person_entity.go   # Entidade GORM
+│       │       └── person_repository_impl.go  # Implementa porta
+│       └── http/                      # Adapter HTTP
+│           ├── handler/               # HTTP handlers
+│           ├── router/                # Configuração de rotas
+│           └── middleware/            # Middlewares
+│
+├── scripts/
+│   ├── create_schema.sql              # Schema SQL (documentação)
+│   └── load-tests/                    # Scripts de teste de carga
 └── .env                               # Variáveis de ambiente
 ```
 
@@ -368,22 +385,92 @@ A camada de persistência registra:
 - **[ERROR]**: Erros que impediram a conclusão de uma operação
 - **[REPO]**: Operações específicas do repositório
 
-## Princípios de Arquitetura
+## Princípios de Arquitetura Hexagonal
 
-Este projeto segue os princípios de **Clean Architecture**:
+Este projeto segue os princípios de **Hexagonal Architecture** (também conhecida como Ports & Adapters):
 
-1. **Independência de Frameworks**: O domínio não depende de frameworks externos
-2. **Testabilidade**: A lógica de negócio pode ser testada sem UI, banco de dados ou servidor web
-3. **Independência de UI**: A UI pode mudar sem afetar o resto do sistema
-4. **Independência de Banco de Dados**: Pode-se trocar o PostgreSQL por outro banco sem afetar o domínio
-5. **Independência de Agentes Externos**: As regras de negócio não conhecem nada sobre o mundo externo
+### Conceitos Principais
+
+#### 🔵 Hexágono (Núcleo)
+O domínio da aplicação, contendo a lógica de negócio pura, sem dependências externas.
+
+- **Entidades**: `domain/person/model/` - Objetos de negócio
+- **Serviços**: `domain/person/service/` - Lógica de negócio
+- **Portas**: `domain/person/ports/` - Interfaces que definem contratos
+
+#### 🔌 Portas (Interfaces)
+Definem os contratos entre o hexágono e o mundo externo.
+
+**Portas Primárias (Driving Ports)**: Comandam o hexágono
+- `PersonService` - Interface que os handlers HTTP usam para executar operações de negócio
+
+**Portas Secundárias (Driven Ports)**: São comandadas pelo hexágono
+- `PersonRepository` - Interface que o domínio usa para persistência
+
+#### ⚙️ Adaptadores (Implementações)
+Conectam o hexágono ao mundo externo.
+
+**Adaptadores Primários (Driving Adapters)**: Iniciam interações
+- `PersonHandler` - Adapter HTTP que implementa endpoints REST
+
+**Adaptadores Secundários (Driven Adapters)**: Respondem a solicitações
+- `PersonRepositoryImpl` - Adapter PostgreSQL que implementa persistência
 
 ### Fluxo de Dependências
 
 ```
-HTTP Handler -> Service -> Repository Interface <- Repository Implementation
-     ↓             ↓              ↓                          ↓
- (Infrastructure) (Domain)    (Domain)              (Infrastructure)
+┌─────────────────────────────────────────────────────────────┐
+│                    ADAPTADORES PRIMÁRIOS                     │
+│                     (Driving Adapters)                       │
+│                                                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │          PersonHandler (HTTP Adapter)                │   │
+│  │     infrastructure/http/handler/person_handler.go    │   │
+│  └────────────────────┬─────────────────────────────────┘   │
+│                       │ depende de                           │
+│                       ▼                                      │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         ports.PersonService (interface)              │   │
+│  │         domain/person/ports/service.go               │   │
+│  └────────────────────┬─────────────────────────────────┘   │
+└───────────────────────┼──────────────────────────────────────┘
+                        │ implementada por
+┌───────────────────────┼──────────────────────────────────────┐
+│                       ▼                HEXÁGONO              │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         PersonServiceImpl                            │   │
+│  │      domain/person/service/person_service.go         │   │
+│  └────────────────────┬─────────────────────────────────┘   │
+│                       │ depende de                           │
+│                       ▼                                      │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │      ports.PersonRepository (interface)              │   │
+│  │      domain/person/ports/repository.go               │   │
+│  └────────────────────┬─────────────────────────────────┘   │
+└───────────────────────┼──────────────────────────────────────┘
+                        │ implementada por
+┌───────────────────────┼──────────────────────────────────────┐
+│                       ▼        ADAPTADORES SECUNDÁRIOS       │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │       PersonRepositoryImpl (PostgreSQL Adapter)      │   │
+│  │  infrastructure/persistence/person/repository.go     │   │
+│  └──────────────────────────────────────────────────────┘   │
+│                     (Driven Adapters)                        │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-As dependências sempre apontam **de fora para dentro**, protegendo o domínio de mudanças externas.
+### Benefícios da Arquitetura
+
+1. **Inversão de Dependência**: Infraestrutura depende do domínio, não o contrário
+2. **Testabilidade**: Lógica de negócio pode ser testada sem banco ou HTTP
+3. **Substituibilidade**: Troque PostgreSQL por MongoDB sem tocar no domínio
+4. **Isolamento**: Mudanças em frameworks não afetam regras de negócio
+5. **Clareza**: Separação explícita entre portas (contratos) e adaptadores (implementações)
+
+### Regras de Dependência
+
+- ✅ Adaptadores **podem** depender de Portas
+- ✅ Hexágono **pode** definir Portas
+- ✅ Hexágono **pode** depender apenas de suas próprias Portas
+- ❌ Hexágono **nunca** depende de Adaptadores
+- ❌ Portas **nunca** dependem de Adaptadores
