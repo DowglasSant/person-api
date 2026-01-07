@@ -1,0 +1,257 @@
+basePath: /api/v1
+definitions:
+  contract.ErrorResponse:
+    properties:
+      error:
+        description: Error code
+        example: validation_error
+        type: string
+      message:
+        description: Descriptive error message
+        example: Invalid CPF
+        type: string
+    type: object
+  contract.NewPersonDTO:
+    properties:
+      birth_date:
+        description: Date of birth
+        example: "1990-01-15T00:00:00Z"
+        type: string
+      cpf:
+        description: Brazilian CPF (can be formatted or digits only)
+        example: 111.444.777-35
+        type: string
+      email:
+        description: Valid email address
+        example: joao.silva@email.com
+        type: string
+      name:
+        description: Person's full name
+        example: João Silva
+        type: string
+      phone:
+        description: Phone number (10 or 11 digits)
+        example: "81912345678"
+        type: string
+    required:
+    - birth_date
+    - cpf
+    - email
+    - name
+    - phone
+    type: object
+  contract.PaginatedResponse:
+    properties:
+      data:
+        description: List of items in current page
+        items:
+          type: object
+        type: array
+      page:
+        description: Current page number
+        example: 1
+        type: integer
+      page_size:
+        description: Number of items per page
+        example: 10
+        type: integer
+      total_items:
+        description: Total number of items in database
+        example: 100
+        type: integer
+      total_pages:
+        description: Total number of pages available
+        example: 10
+        type: integer
+    type: object
+  contract.PersonResponseDTO:
+    properties:
+      birth_date:
+        description: Date of birth
+        example: "1990-01-15T00:00:00Z"
+        type: string
+      cpf:
+        description: Brazilian CPF (digits only)
+        example: "11144477735"
+        type: string
+      created_at:
+        description: Record creation timestamp
+        example: "2024-01-01T10:00:00Z"
+        type: string
+      email:
+        description: Email address
+        example: joao.silva@email.com
+        type: string
+      id:
+        description: Unique person ID
+        example: 1
+        type: integer
+      name:
+        description: Full name
+        example: João Silva
+        type: string
+      phone:
+        description: Phone number (digits only)
+        example: "81912345678"
+        type: string
+      updated_at:
+        description: Last update timestamp
+        example: "2024-01-01T10:00:00Z"
+        type: string
+    type: object
+  contract.SuccessResponse:
+    properties:
+      id:
+        description: ID of created resource
+        example: 1
+        type: integer
+      message:
+        description: Success message
+        example: Person created successfully
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact:
+    email: support@pessoasapi.com
+    name: API Support
+  description: REST API for people management following hexagonal architecture principles
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+  termsOfService: http://swagger.io/terms/
+  title: Pessoas API
+  version: "1.0"
+paths:
+  /persons:
+    get:
+      consumes:
+      - application/json
+      description: Returns a paginated list of persons with sorting options
+      parameters:
+      - default: 1
+        description: Page number
+        in: query
+        minimum: 1
+        name: page
+        type: integer
+      - default: 10
+        description: Items per page
+        in: query
+        maximum: 100
+        minimum: 1
+        name: page_size
+        type: integer
+      - default: id
+        description: Field to sort by
+        enum:
+        - id
+        - name
+        - cpf
+        - email
+        - created_at
+        - updated_at
+        in: query
+        name: sort
+        type: string
+      - default: desc
+        description: Sort direction
+        enum:
+        - asc
+        - desc
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            allOf:
+            - $ref: '#/definitions/contract.PaginatedResponse'
+            - properties:
+                data:
+                  items:
+                    $ref: '#/definitions/contract.PersonResponseDTO'
+                  type: array
+              type: object
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/contract.ErrorResponse'
+      summary: List persons with pagination
+      tags:
+      - Persons
+    post:
+      consumes:
+      - application/json
+      description: Creates a new person in the system with the provided data
+      parameters:
+      - description: Person data to be created
+        in: body
+        name: person
+        required: true
+        schema:
+          $ref: '#/definitions/contract.NewPersonDTO'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/contract.SuccessResponse'
+        "400":
+          description: Invalid input data
+          schema:
+            $ref: '#/definitions/contract.ErrorResponse'
+        "422":
+          description: Business validation error
+          schema:
+            $ref: '#/definitions/contract.ErrorResponse'
+      summary: Create a new person
+      tags:
+      - Persons
+  /persons/cpf/{cpf}:
+    get:
+      consumes:
+      - application/json
+      description: Returns person data based on the provided Brazilian CPF
+      parameters:
+      - description: Person's CPF (with or without formatting)
+        example: 111.444.777-35
+        in: path
+        name: cpf
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/contract.PersonResponseDTO'
+        "400":
+          description: CPF not provided
+          schema:
+            $ref: '#/definitions/contract.ErrorResponse'
+        "404":
+          description: Person not found
+          schema:
+            $ref: '#/definitions/contract.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/contract.ErrorResponse'
+      summary: Find person by CPF
+      tags:
+      - Persons
+schemes:
+- http
+- https
+swagger: "2.0"
+tags:
+- description: Endpoints for API health check
+  name: Health
+- description: CRUD operations for person management
+  name: Persons

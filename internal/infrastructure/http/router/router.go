@@ -5,16 +5,19 @@ import (
 	"pessoas-api/internal/infrastructure/http/middleware"
 
 	"github.com/gin-gonic/gin"
+	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
-// SetupRouter configures and returns the HTTP router with all routes.
-// It accepts a PersonHandler to handle person-related endpoints.
 func SetupRouter(personHandler *handler.PersonHandler) *gin.Engine {
 	router := gin.New()
 
 	router.Use(gin.Recovery())
 
 	router.Use(middleware.LoggerMiddleware())
+
+	// Swagger documentation
+	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	api := router.Group("/api")
 	{

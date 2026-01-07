@@ -54,6 +54,7 @@ Esta aplicação implementa **Hexagonal Architecture**, separando claramente o d
 - **GORM** - ORM
 - **PostgreSQL** - Banco de dados
 - **Testify** - Biblioteca de testes
+- **Swagger/OpenAPI 3.0** - Documentação da API
 
 ## Configuração
 
@@ -96,6 +97,35 @@ go run cmd/api/main.go
 ```
 
 A API estará disponível em `http://localhost:8080`
+
+## Documentação da API
+
+### Swagger UI
+
+A documentação completa da API está disponível através do **Swagger UI** quando a aplicação está rodando:
+
+🔗 **http://localhost:8080/swagger/index.html**
+
+A interface Swagger fornece:
+- ✅ Documentação interativa de todos os endpoints
+- ✅ Descrição detalhada de parâmetros e respostas
+- ✅ Exemplos de requisições e respostas
+- ✅ Possibilidade de testar endpoints diretamente no navegador
+- ✅ Schemas de dados (DTOs) com validações
+
+### Gerando Documentação
+
+Se você modificar as anotações Swagger nos handlers ou DTOs, regenere a documentação:
+
+```bash
+# Instalar swag CLI (uma vez)
+go install github.com/swaggo/swag/cmd/swag@latest
+
+# Gerar documentação
+swag init -g cmd/api/main.go -o docs
+```
+
+Os arquivos gerados em `docs/` devem ser commitados no repositório.
 
 ## Endpoints
 
