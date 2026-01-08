@@ -360,6 +360,10 @@ const docTemplate = `{
             "name": "Health"
         },
         {
+            "description": "Operator authentication and registration",
+            "name": "Authentication"
+        },
+        {
             "description": "CRUD operations for person management",
             "name": "Persons"
         }

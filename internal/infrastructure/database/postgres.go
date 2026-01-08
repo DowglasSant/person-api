@@ -26,13 +26,33 @@ func LoadConfig() *Config {
 		log.Println("No .env file found, using environment variables")
 	}
 
-	return &Config{
+	config := &Config{
 		Host:     getEnv("DB_HOST", "localhost"),
 		Port:     getEnv("DB_PORT", "5432"),
 		User:     getEnv("DB_USER", "postgres"),
-		Password: getEnv("DB_PASSWORD", "postgres"),
+		Password: getEnvRequired("DB_PASSWORD"),
 		DBName:   getEnv("DB_NAME", "people"),
-		SSLMode:  getEnv("DB_SSLMODE", "disable"),
+		SSLMode:  getEnv("DB_SSLMODE", "require"),
+	}
+
+	validateConfig(config)
+	return config
+}
+
+func getEnvRequired(key string) string {
+	value := os.Getenv(key)
+	if value == "" {
+		log.Fatalf("CRITICAL: Required environment variable %s is not set", key)
+	}
+	return value
+}
+
+func validateConfig(config *Config) {
+	if config.Password == "postgres" || config.Password == "password" {
+		log.Fatal("CRITICAL: Using default/weak database password is not allowed")
+	}
+	if config.SSLMode == "disable" {
+		log.Println("WARNING: SSL is disabled. This is not recommended for production")
 	}
 }
 
@@ -67,10 +87,10 @@ func NewPostgresConnection(config *Config) (*gorm.DB, error) {
 		return nil, fmt.Errorf("failed to get database instance: %w", err)
 	}
 
-	sqlDB.SetMaxOpenConns(100)
 	sqlDB.SetMaxOpenConns(50)
 	sqlDB.SetMaxIdleConns(25)
 	sqlDB.SetConnMaxLifetime(5 * time.Minute)
+	sqlDB.SetConnMaxIdleTime(10 * time.Minute)
 
 	log.Println("Database connection established successfully")
 

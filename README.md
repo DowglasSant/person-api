@@ -19,27 +19,45 @@ Esta aplicação implementa **Hexagonal Architecture**, separando claramente o d
 │   │       └── pagination_dto.go
 │   │
 │   ├── domain/                        # 🔵 HEXÁGONO (Núcleo da Aplicação)
-│   │   └── person/
+│   │   ├── person/
+│   │   │   ├── model/                 # Entidades de domínio
+│   │   │   │   └── person.go
+│   │   │   ├── ports/                 # 🔌 PORTAS (Interfaces)
+│   │   │   │   ├── service.go         # PersonService interface
+│   │   │   │   └── repository.go      # PersonRepository interface
+│   │   │   ├── service/               # Lógica de negócio (implementa porta)
+│   │   │   │   └── person_service.go  # PersonServiceImpl
+│   │   │   ├── error/                 # Erros de domínio
+│   │   │   └── utils/                 # Utilitários de domínio
+│   │   │
+│   │   └── operator/                  # 🔐 Domínio de Autenticação
 │   │       ├── model/                 # Entidades de domínio
-│   │       │   └── person.go
+│   │       │   └── operator.go        # Operador com bcrypt
 │   │       ├── ports/                 # 🔌 PORTAS (Interfaces)
-│   │       │   ├── service.go         # PersonService interface
-│   │       │   └── repository.go      # PersonRepository interface
-│   │       ├── service/               # Lógica de negócio (implementa porta)
-│   │       │   └── person_service.go  # PersonServiceImpl
-│   │       ├── error/                 # Erros de domínio
-│   │       └── utils/                 # Utilitários de domínio
+│   │       │   ├── service.go         # AuthService interface
+│   │       │   └── repository.go      # OperatorRepository interface
+│   │       └── service/               # Lógica de autenticação
+│   │           └── auth_service.go    # AuthServiceImpl
 │   │
 │   └── infrastructure/                # ⚙️ ADAPTADORES (Camada Externa)
 │       ├── database/                  # Configuração de banco de dados
 │       ├── persistence/               # Adapter de persistência
-│       │   └── person/
-│       │       ├── person_entity.go   # Entidade GORM
-│       │       └── person_repository_impl.go  # Implementa porta
+│       │   ├── person/
+│       │   │   ├── person_entity.go   # Entidade GORM
+│       │   │   └── person_repository_impl.go  # Implementa porta
+│       │   └── operator/
+│       │       ├── operator_entity.go # Entidade GORM
+│       │       └── operator_repository_impl.go # Implementa porta
 │       └── http/                      # Adapter HTTP
 │           ├── handler/               # HTTP handlers
+│           │   ├── person_handler.go  # CRUD de pessoas
+│           │   └── auth_handler.go    # Autenticação
 │           ├── router/                # Configuração de rotas
 │           └── middleware/            # Middlewares
+│               ├── auth.go            # JWT validation
+│               ├── rate_limiter.go    # Rate limiting
+│               ├── cors.go            # CORS config
+│               └── validation.go      # Input validation
 │
 ├── scripts/
 │   ├── create_schema.sql              # Schema SQL (documentação)
@@ -55,6 +73,8 @@ Esta aplicação implementa **Hexagonal Architecture**, separando claramente o d
 - **PostgreSQL** - Banco de dados
 - **Testify** - Biblioteca de testes
 - **Swagger/OpenAPI 3.0** - Documentação da API
+- **JWT (golang-jwt/jwt)** - Autenticação com tokens
+- **Bcrypt** - Hash de senhas
 
 ## Configuração
 
@@ -68,13 +88,20 @@ Esta aplicação implementa **Hexagonal Architecture**, separando claramente o d
 Copie o arquivo `.env.example` para `.env` e configure:
 
 ```bash
+# Database Configuration
 DB_HOST=localhost
 DB_PORT=5432
 DB_USER=postgres
-DB_PASSWORD=@Pass2025
+DB_PASSWORD=your-secure-password-here
 DB_NAME=postgres
 DB_SCHEMA=people
-DB_SSLMODE=disable
+DB_SSLMODE=require
+
+# JWT Configuration (REQUIRED - minimum 32 characters)
+JWT_SECRET=generate-a-strong-random-secret-key-minimum-32-characters-long
+
+# CORS Configuration
+CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:8080
 ```
 
 ### Instalação
@@ -82,6 +109,12 @@ DB_SSLMODE=disable
 ```bash
 # Instalar dependências
 go mod download
+
+# Criar tabela de pessoas
+psql -U postgres -d postgres -f scripts/create_schema.sql
+
+# Criar tabela de operadores (autenticação)
+psql -U postgres -d postgres -f scripts/create_operators_table.sql
 
 # Build da aplicação
 go build -o bin/api cmd/api/main.go
@@ -126,6 +159,136 @@ swag init -g cmd/api/main.go -o docs
 ```
 
 Os arquivos gerados em `docs/` devem ser commitados no repositório.
+
+## Autenticação 🔐
+
+A API utiliza **JWT (JSON Web Tokens)** para autenticação. Os operadores do sistema devem se registrar e fazer login para obter um token que será usado nas requisições às rotas protegidas.
+
+### Sistema de Operadores
+
+A autenticação é baseada em **operadores** (usuários do sistema) que gerenciam os cadastros de pessoas. Cada operador possui:
+- **Username**: Identificador único (3-50 caracteres)
+- **Email**: Email válido e único
+- **Password**: Senha forte (mínimo 8 caracteres), hasheada com bcrypt
+- **Active**: Status da conta (ativo/inativo)
+
+### Fluxo de Autenticação
+
+```
+1. Registrar operador → POST /api/v1/auth/register
+2. Fazer login        → POST /api/v1/auth/login (recebe JWT token)
+3. Usar o token       → Header: Authorization: Bearer <token>
+```
+
+### Endpoints de Autenticação
+
+#### Registrar Operador
+
+```bash
+POST /api/v1/auth/register
+Content-Type: application/json
+
+{
+  "username": "john.doe",
+  "email": "john.doe@company.com",
+  "password": "SecurePass123!"
+}
+```
+
+**Resposta (201):**
+```json
+{
+  "id": 1,
+  "message": "Operator registered successfully"
+}
+```
+
+**Erros possíveis:**
+- 400: Dados inválidos
+- 409: Username ou email já existe
+- 422: Erro de validação
+
+#### Fazer Login
+
+```bash
+POST /api/v1/auth/login
+Content-Type: application/json
+
+{
+  "username": "john.doe",
+  "password": "SecurePass123!"
+}
+```
+
+**Resposta (200):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+  "message": "Login successful"
+}
+```
+
+**Erros possíveis:**
+- 400: Dados inválidos
+- 401: Credenciais inválidas ou conta inativa
+
+### Usando o Token
+
+Todas as rotas `/api/v1/persons/*` requerem autenticação. Inclua o token no header `Authorization`:
+
+```bash
+curl -H "Authorization: Bearer <seu-token-aqui>" \
+  http://localhost:8080/api/v1/persons
+```
+
+**Exemplo completo:**
+
+```bash
+# 1. Registrar operador
+curl -X POST http://localhost:8080/api/v1/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "email": "admin@company.com",
+    "password": "Admin@123456"
+  }'
+
+# 2. Fazer login e salvar token
+TOKEN=$(curl -s -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "admin",
+    "password": "Admin@123456"
+  }' | jq -r '.token')
+
+# 3. Usar token para acessar rotas protegidas
+curl -H "Authorization: Bearer $TOKEN" \
+  http://localhost:8080/api/v1/persons
+```
+
+### Segurança
+
+✅ **Senhas hasheadas com bcrypt** (custo 10)
+✅ **Tokens JWT com expiração** (24 horas)
+✅ **Validação de credenciais segura** (mensagens genéricas)
+✅ **Username e email únicos**
+✅ **Verificação de conta ativa**
+✅ **Rate limiting** (60 requisições/minuto)
+✅ **CORS configurável**
+✅ **Security headers** aplicados
+
+### Rotas Públicas vs Protegidas
+
+**Públicas** (sem autenticação):
+- POST `/api/v1/auth/register`
+- POST `/api/v1/auth/login`
+- GET `/health`
+- GET `/swagger/*`
+
+**Protegidas** (JWT obrigatório):
+- GET `/api/v1/persons`
+- POST `/api/v1/persons`
+- GET `/api/v1/persons/cpf/:cpf`
 
 ## Endpoints
 
@@ -326,6 +489,18 @@ bash scripts/load-tests/test-create-person.sh    # Testa criação de pessoa
 | email        | VARCHAR(255) | Email                        |
 | created_at   | TIMESTAMP    | Data de criação              |
 | updated_at   | TIMESTAMP    | Data de atualização          |
+
+**Tabela: operators**
+
+| Campo       | Tipo         | Descrição                         |
+|-------------|--------------|-----------------------------------|
+| id          | SERIAL4      | Chave primária (autogerado)       |
+| username    | VARCHAR(50)  | Username único                    |
+| email       | VARCHAR(100) | Email único                       |
+| password    | VARCHAR(255) | Senha hasheada (bcrypt)           |
+| active      | BOOLEAN      | Status da conta (padrão: true)    |
+| created_at  | TIMESTAMP    | Data de criação                   |
+| updated_at  | TIMESTAMP    | Data de atualização               |
 
 ### SQL de criação
 
