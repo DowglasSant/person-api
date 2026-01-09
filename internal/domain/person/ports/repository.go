@@ -6,6 +6,9 @@ import person "pessoas-api/internal/domain/person/model"
 // This is the secondary port (driven port) that the domain requires to be implemented by adapters.
 type PersonRepository interface {
 	Save(person *person.Person) (ID int, err error)
+	Update(person *person.Person) error
+	Delete(id int) error
 	FindAll(page, size int, sortBy, sortOrder string) ([]*person.Person, int64, error)
 	FindByCPF(cpf string) (*person.Person, error)
+	FindByID(id int) (*person.Person, error)
 }

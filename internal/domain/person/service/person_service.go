@@ -2,6 +2,7 @@ package person
 
 import (
 	contract "pessoas-api/internal/contract/person"
+	personError "pessoas-api/internal/domain/person/error"
 	person "pessoas-api/internal/domain/person/model"
 	"pessoas-api/internal/domain/person/ports"
 	personUtils "pessoas-api/internal/domain/person/utils"
@@ -57,4 +58,49 @@ func (s *PersonServiceImpl) ListPersons(page, pageSize int, sort, order string) 
 func (s *PersonServiceImpl) FindPersonByCPF(cpf string) (*person.Person, error) {
 	cpfDigits := personUtils.OnlyDigits(cpf)
 	return s.repository.FindByCPF(cpfDigits)
+}
+
+func (s *PersonServiceImpl) FindPersonByID(id int) (*person.Person, error) {
+	return s.repository.FindByID(id)
+}
+
+func (s *PersonServiceImpl) UpdatePerson(id int, dto contract.UpdatePersonDTO) error {
+	existingPerson, err := s.repository.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	if existingPerson == nil {
+		return personError.ErrPersonNotFound
+	}
+
+	updatedPerson, err := person.NewPerson(
+		dto.Name,
+		dto.CPF,
+		dto.BirthDate,
+		dto.PhoneNumber,
+		dto.Email,
+	)
+
+	if err != nil {
+		return err
+	}
+
+	updatedPerson.ID = id
+	updatedPerson.CreatedAt = existingPerson.CreatedAt
+
+	return s.repository.Update(updatedPerson)
+}
+
+func (s *PersonServiceImpl) DeletePerson(id int) error {
+	existingPerson, err := s.repository.FindByID(id)
+	if err != nil {
+		return err
+	}
+
+	if existingPerson == nil {
+		return personError.ErrPersonNotFound
+	}
+
+	return s.repository.Delete(id)
 }

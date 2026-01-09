@@ -11,4 +11,5 @@ var (
 	ErrEmailRequired    = errors.New("email is required")
 	ErrEmailInvalid     = errors.New("email is invalid")
 	ErrBirthDateInvalid = errors.New("birth date is invalid")
+	ErrPersonNotFound   = errors.New("person not found")
 )

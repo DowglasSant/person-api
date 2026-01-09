@@ -7,6 +7,9 @@ import (
 
 type PersonService interface {
 	CreatePerson(dto contract.NewPersonDTO) (ID int, err error)
+	UpdatePerson(id int, dto contract.UpdatePersonDTO) error
+	DeletePerson(id int) error
 	ListPersons(page, pageSize int, sort, order string) ([]*person.Person, int64, error)
 	FindPersonByCPF(cpf string) (*person.Person, error)
+	FindPersonByID(id int) (*person.Person, error)
 }

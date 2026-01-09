@@ -95,3 +95,45 @@ func (r *PersonRepositoryImpl) FindByCPF(cpf string) (*personModel.Person, error
 
 	return entity.ToDomain(), nil
 }
+
+func (r *PersonRepositoryImpl) FindByID(id int) (*personModel.Person, error) {
+	var entity PersonEntity
+
+	result := r.db.First(&entity, id)
+	if result.Error != nil {
+		if result.Error == gorm.ErrRecordNotFound {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to find person by ID: %w", result.Error)
+	}
+
+	return entity.ToDomain(), nil
+}
+
+func (r *PersonRepositoryImpl) Update(p *personModel.Person) error {
+	entity := FromDomain(p)
+
+	result := r.db.Model(&PersonEntity{}).Where("id = ?", entity.ID).Updates(entity)
+	if result.Error != nil {
+		return fmt.Errorf("failed to update person: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("person not found")
+	}
+
+	return nil
+}
+
+func (r *PersonRepositoryImpl) Delete(id int) error {
+	result := r.db.Delete(&PersonEntity{}, id)
+	if result.Error != nil {
+		return fmt.Errorf("failed to delete person: %w", result.Error)
+	}
+
+	if result.RowsAffected == 0 {
+		return fmt.Errorf("person not found")
+	}
+
+	return nil
+}

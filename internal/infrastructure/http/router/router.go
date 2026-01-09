@@ -48,11 +48,17 @@ func SetupRouter(personHandler *handler.PersonHandler, authHandler *handler.Auth
 			protected.Use(middleware.JWTAuth())
 			{
 				persons := protected.Group("/persons")
-				persons.Use(middleware.ValidatePagination())
 				{
 					persons.POST("", personHandler.CreatePerson)
-					persons.GET("", personHandler.ListPersons)
+					persons.PUT("/:id", personHandler.UpdatePerson)
+					persons.DELETE("/:id", personHandler.DeletePerson)
 					persons.GET("/cpf/:cpf", personHandler.FindPersonByCPF)
+
+					personsList := persons.Group("")
+					personsList.Use(middleware.ValidatePagination())
+					{
+						personsList.GET("", personHandler.ListPersons)
+					}
 				}
 			}
 		}

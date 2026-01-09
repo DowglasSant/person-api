@@ -156,3 +156,113 @@ func (h *PersonHandler) FindPersonByCPF(c *gin.Context) {
 	log.Printf("[SUCCESS] FindPersonByCPF - Found person with ID: %d, Name: %s", person.ID, person.Name)
 	c.JSON(http.StatusOK, person)
 }
+
+// UpdatePerson godoc
+// @Summary      Update a person
+// @Description  Updates an existing person with the provided data
+// @Tags         Persons
+// @Accept       json
+// @Produce      json
+// @Param        id      path      int                     true  "Person ID"
+// @Param        person  body      contract.UpdatePersonDTO  true  "Updated person data"
+// @Success      200     {object}  contract.SuccessResponse
+// @Failure      400     {object}  contract.ErrorResponse  "Invalid input data"
+// @Failure      404     {object}  contract.ErrorResponse  "Person not found"
+// @Failure      422     {object}  contract.ErrorResponse  "Business validation error"
+// @Router       /persons/{id} [put]
+func (h *PersonHandler) UpdatePerson(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Printf("[ERROR] UpdatePerson - Invalid ID parameter: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Invalid person ID",
+		})
+		return
+	}
+
+	var dto contract.UpdatePersonDTO
+	if err := c.ShouldBindJSON(&dto); err != nil {
+		log.Printf("[ERROR] UpdatePerson - Invalid request body: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Invalid request body: " + err.Error(),
+		})
+		return
+	}
+
+	log.Printf("[INFO] UpdatePerson - Updating person ID: %d", id)
+
+	err = h.service.UpdatePerson(id, dto)
+	if err != nil {
+		if err.Error() == "person not found" {
+			log.Printf("[WARN] UpdatePerson - Person not found with ID: %d", id)
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "not_found",
+				"message": "Person not found",
+			})
+			return
+		}
+
+		log.Printf("[ERROR] UpdatePerson - Failed to update person ID %d: %v", id, err)
+		c.JSON(http.StatusUnprocessableEntity, gin.H{
+			"error":   "validation_error",
+			"message": err.Error(),
+		})
+		return
+	}
+
+	log.Printf("[SUCCESS] UpdatePerson - Person ID %d updated successfully", id)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Person updated successfully",
+	})
+}
+
+// DeletePerson godoc
+// @Summary      Delete a person
+// @Description  Deletes a person from the system
+// @Tags         Persons
+// @Accept       json
+// @Produce      json
+// @Param        id  path      int  true  "Person ID"
+// @Success      200 {object}  contract.SuccessResponse
+// @Failure      400 {object}  contract.ErrorResponse  "Invalid ID"
+// @Failure      404 {object}  contract.ErrorResponse  "Person not found"
+// @Router       /persons/{id} [delete]
+func (h *PersonHandler) DeletePerson(c *gin.Context) {
+	id, err := strconv.Atoi(c.Param("id"))
+	if err != nil {
+		log.Printf("[ERROR] DeletePerson - Invalid ID parameter: %v", err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":   "invalid_request",
+			"message": "Invalid person ID",
+		})
+		return
+	}
+
+	log.Printf("[INFO] DeletePerson - Deleting person ID: %d", id)
+
+	err = h.service.DeletePerson(id)
+	if err != nil {
+		if err.Error() == "person not found" {
+			log.Printf("[WARN] DeletePerson - Person not found with ID: %d", id)
+			c.JSON(http.StatusNotFound, gin.H{
+				"error":   "not_found",
+				"message": "Person not found",
+			})
+			return
+		}
+
+		log.Printf("[ERROR] DeletePerson - Failed to delete person ID %d: %v", id, err)
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error":   "internal_error",
+			"message": "Failed to delete person: " + err.Error(),
+		})
+		return
+	}
+
+	log.Printf("[SUCCESS] DeletePerson - Person ID %d deleted successfully", id)
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Person deleted successfully",
+	})
+}
