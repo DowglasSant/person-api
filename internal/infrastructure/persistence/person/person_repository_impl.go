@@ -99,7 +99,7 @@ func (r *PersonRepositoryImpl) FindByCPF(cpf string) (*personModel.Person, error
 func (r *PersonRepositoryImpl) FindByID(id int) (*personModel.Person, error) {
 	var entity PersonEntity
 
-	result := r.db.First(&entity, id)
+	result := r.db.Table("people.person").Where("id = ?", id).First(&entity)
 	if result.Error != nil {
 		if result.Error == gorm.ErrRecordNotFound {
 			return nil, nil

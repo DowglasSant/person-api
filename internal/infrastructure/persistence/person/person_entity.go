@@ -36,6 +36,7 @@ func (e *PersonEntity) ToDomain() *personModel.Person {
 
 func FromDomain(p *personModel.Person) *PersonEntity {
 	return &PersonEntity{
+		ID:          p.ID,
 		Name:        p.Name,
 		CPF:         p.CPF,
 		BirthDate:   p.BirthDate,
