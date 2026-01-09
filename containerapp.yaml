@@ -1,0 +1,49 @@
+location: brazilsouth
+name: pessoas-api-aci-yaml
+properties:
+  containers:
+  - name: pessoas-api
+    properties:
+      image: pessoasapiacr.azurecr.io/pessoas-api:latest
+      ports:
+      - port: 8080
+        protocol: TCP
+      environmentVariables:
+      - name: DB_HOST
+        value: pessoas-api-db-br.postgres.database.azure.com
+      - name: DB_PORT
+        value: '5432'
+      - name: DB_USER
+        value: apiuser
+      - name: DB_PASSWORD
+        secureValue: jz7ZmUdRneE+42XDLlLfaqz3ycKmdzD3
+      - name: DB_NAME
+        value: postgres
+      - name: DB_SCHEMA
+        value: people
+      - name: DB_SSLMODE
+        value: require
+      - name: JWT_SECRET
+        secureValue: IpnLE98R+8OZQDbrOyMpslGwlPL6SNb7m51UGTpoVTQ=
+      - name: CORS_ALLOWED_ORIGINS
+        value: '*'
+      - name: GIN_MODE
+        value: release
+      resources:
+        requests:
+          cpu: 1.0
+          memoryInGB: 1.5
+  imageRegistryCredentials:
+  - server: pessoasapiacr.azurecr.io
+    username: pessoasapiacr
+    password: REGISTRY_PASSWORD_HERE
+  ipAddress:
+    type: Public
+    ports:
+    - protocol: TCP
+      port: 8080
+    dnsNameLabel: pessoas-api-aci
+  osType: Linux
+  restartPolicy: Always
+tags: {}
+type: Microsoft.ContainerInstance/containerGroups
