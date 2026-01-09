@@ -18,12 +18,12 @@ func TestNewOperator_Success(t *testing.T) {
 	assert.NotNil(t, op)
 	assert.Equal(t, username, op.Username)
 	assert.Equal(t, email, op.Email)
-	assert.NotEqual(t, password, op.Password)
+	assert.NotEqual(t, password, op.PasswordHash)
 	assert.True(t, op.Active)
 	assert.NotZero(t, op.CreatedAt)
 	assert.NotZero(t, op.UpdatedAt)
 
-	err = bcrypt.CompareHashAndPassword([]byte(op.Password), []byte(password))
+	err = bcrypt.CompareHashAndPassword([]byte(op.PasswordHash), []byte(password))
 	assert.NoError(t, err)
 }
 
@@ -294,7 +294,7 @@ func TestOperator_FieldTypes(t *testing.T) {
 	assert.IsType(t, 0, op.ID)
 	assert.IsType(t, "", op.Username)
 	assert.IsType(t, "", op.Email)
-	assert.IsType(t, "", op.Password)
+	assert.IsType(t, "", op.PasswordHash)
 	assert.IsType(t, true, op.Active)
 }
 

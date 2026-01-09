@@ -8,13 +8,13 @@ import (
 )
 
 type Operator struct {
-	ID        int
-	Username  string
-	Email     string
-	Password  string
-	Active    bool
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID           int       `gorm:"primaryKey"`
+	Username     string    `gorm:"uniqueIndex;not null"`
+	Email        string    `gorm:"uniqueIndex;not null"`
+	PasswordHash string    `gorm:"column:password_hash;not null"`
+	Active       bool      `gorm:"default:true"`
+	CreatedAt    time.Time `gorm:"autoCreateTime"`
+	UpdatedAt    time.Time `gorm:"autoUpdateTime"`
 }
 
 func NewOperator(username, email, password string) (*Operator, error) {
@@ -28,17 +28,17 @@ func NewOperator(username, email, password string) (*Operator, error) {
 	}
 
 	return &Operator{
-		Username:  username,
-		Email:     email,
-		Password:  hashedPassword,
-		Active:    true,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
+		Username:     username,
+		Email:        email,
+		PasswordHash: hashedPassword,
+		Active:       true,
+		CreatedAt:    time.Now(),
+		UpdatedAt:    time.Now(),
 	}, nil
 }
 
 func (o *Operator) ValidatePassword(password string) bool {
-	err := bcrypt.CompareHashAndPassword([]byte(o.Password), []byte(password))
+	err := bcrypt.CompareHashAndPassword([]byte(o.PasswordHash), []byte(password))
 	return err == nil
 }
 
@@ -52,7 +52,7 @@ func (o *Operator) UpdatePassword(newPassword string) error {
 		return err
 	}
 
-	o.Password = hashedPassword
+	o.PasswordHash = hashedPassword
 	o.UpdatedAt = time.Now()
 	return nil
 }

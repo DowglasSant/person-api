@@ -1,38 +1,16 @@
-# Git
 .git
 .gitignore
-
-# Environment files
+README.md
 .env
-.env.local
-.env.*.local
-
-# IDE
+*.md
 .vscode
 .idea
-*.swp
-*.swo
-*~
-
-# Test files
-*_test.go
-coverage.out
-coverage.html
-
-# Documentation
-*.md
-docs/
-
-# Build artifacts
-*.exe
-*.exe~
-*.dll
-*.so
-*.dylib
-*.test
-*.out
-
-# Misc
-.DS_Store
+*.log
 tmp/
-temp/
+vendor/
+coverage.html
+coverage.out
+**/*_test.go
+.DS_Store
+railway.toml
+DEPLOY-RAILWAY.md

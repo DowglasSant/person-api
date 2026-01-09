@@ -3,7 +3,7 @@ FROM golang:1.24-alpine AS builder
 
 WORKDIR /app
 
-# Install build dependencies
+# Install dependencies
 RUN apk add --no-cache git
 
 # Copy go mod files
@@ -34,5 +34,5 @@ COPY --from=builder /app/main .
 # Expose port
 EXPOSE 8080
 
-# Run the application
+# Run
 CMD ["./main"]

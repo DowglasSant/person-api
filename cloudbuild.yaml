@@ -1,0 +1,25 @@
+steps:
+  # Build the container image
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/project-67ab04df-4cc6-4600-b37/pessoas-api-repo/pessoas-api:latest'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/project-67ab04df-4cc6-4600-b37/pessoas-api-repo/pessoas-api:$BUILD_ID'
+      - '.'
+
+  # Push the container image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args:
+      - 'push'
+      - '--all-tags'
+      - 'us-central1-docker.pkg.dev/project-67ab04df-4cc6-4600-b37/pessoas-api-repo/pessoas-api'
+
+images:
+  - 'us-central1-docker.pkg.dev/project-67ab04df-4cc6-4600-b37/pessoas-api-repo/pessoas-api:latest'
+  - 'us-central1-docker.pkg.dev/project-67ab04df-4cc6-4600-b37/pessoas-api-repo/pessoas-api:$BUILD_ID'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
