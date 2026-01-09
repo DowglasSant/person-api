@@ -18,6 +18,7 @@ type Config struct {
 	User     string
 	Password string
 	DBName   string
+	Schema   string
 	SSLMode  string
 }
 
@@ -31,7 +32,8 @@ func LoadConfig() *Config {
 		Port:     getEnv("DB_PORT", "5432"),
 		User:     getEnv("DB_USER", "postgres"),
 		Password: getEnvRequired("DB_PASSWORD"),
-		DBName:   getEnv("DB_NAME", "people"),
+		DBName:   getEnv("DB_NAME", "postgres"),
+		Schema:   getEnv("DB_SCHEMA", "people"),
 		SSLMode:  getEnv("DB_SSLMODE", "require"),
 	}
 
@@ -65,13 +67,14 @@ func getEnv(key, defaultValue string) string {
 
 func NewPostgresConnection(config *Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
-		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s",
+		"host=%s port=%s user=%s password=%s dbname=%s sslmode=%s search_path=%s",
 		config.Host,
 		config.Port,
 		config.User,
 		config.Password,
 		config.DBName,
 		config.SSLMode,
+		config.Schema,
 	)
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
