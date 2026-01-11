@@ -32,3 +32,21 @@ func (m *MockPersonService) FindPersonByCPF(cpf string) (*person.Person, error) 
 	}
 	return args.Get(0).(*person.Person), args.Error(1)
 }
+
+func (m *MockPersonService) FindPersonByID(id int) (*person.Person, error) {
+	args := m.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*person.Person), args.Error(1)
+}
+
+func (m *MockPersonService) UpdatePerson(id int, dto contract.UpdatePersonDTO) error {
+	args := m.Called(id, dto)
+	return args.Error(0)
+}
+
+func (m *MockPersonService) DeletePerson(id int) error {
+	args := m.Called(id)
+	return args.Error(0)
+}

@@ -37,6 +37,24 @@ func (r *repositoryMock) FindByCPF(cpf string) (*person.Person, error) {
 	return args.Get(0).(*person.Person), args.Error(1)
 }
 
+func (r *repositoryMock) FindByID(id int) (*person.Person, error) {
+	args := r.Called(id)
+	if args.Get(0) == nil {
+		return nil, args.Error(1)
+	}
+	return args.Get(0).(*person.Person), args.Error(1)
+}
+
+func (r *repositoryMock) Update(person *person.Person) error {
+	args := r.Called(person)
+	return args.Error(0)
+}
+
+func (r *repositoryMock) Delete(id int) error {
+	args := r.Called(id)
+	return args.Error(0)
+}
+
 func TestPersonService_CreatePerson_Success(t *testing.T) {
 	assert := assert.New(t)
 	repoMock := new(repositoryMock)
